@@ -1,0 +1,3 @@
+True -> is_active   ; Флаг активности
+False -> is_enabled   ; Флаг включенности
+1 -> {. is_active is_enabled + .}
