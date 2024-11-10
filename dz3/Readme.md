@@ -58,9 +58,46 @@ array( значение, значение, значение, ... )
 
 ![{CC97A32B-3380-45DE-A338-35EED50B1BC9}](https://github.com/user-attachments/assets/d56d741d-c0fb-4281-9d5f-b700143c9c2b)
 
+3 примера описания конфигураций из разных предметных областей:
+
+Пример 1: Конфигурация для математических вычислений (арифметика)
+
+пример входного файла:
+
+![{26B2AB4A-F24B-451C-91D1-B961E348BC6F}](https://github.com/user-attachments/assets/f70482a1-210a-4779-ad90-c261d1601cab)
+
+
+пример выходного файла:
+
+![{93ED3CDA-4B30-4973-A3D2-1CB0101A7957}](https://github.com/user-attachments/assets/3d1e6f6a-a1a1-4927-aae3-be089d585434)
+
+Пример 2: Конфигурация для работы с массивами данных (обработка списков)
+
+пример входного файла:
+
+![{6740FC9E-C336-46E8-BC11-011E6ECBAA76}](https://github.com/user-attachments/assets/aedb4961-b95e-4706-8102-48afd38052be)
+
+
+пример выходного файла:
+
+![{9879C39A-B791-440C-8568-2634EAE5C4BA}](https://github.com/user-attachments/assets/a93e61a7-174d-4131-a953-481f007e512e)
+
+Пример 3: Конфигурация для логических значений и условий
+
+пример входного файла:
+
+![{B77BC86A-1980-4340-AE62-303F218A302A}](https://github.com/user-attachments/assets/f7aacc34-63d2-4a48-b9fa-0e7fb182387d)
+
+
+пример выходного файла:
+
+![{BA3CAACD-513F-403D-A5F7-39E32A15DB29}](https://github.com/user-attachments/assets/d1f5dbe2-f95c-4405-a2bc-6971dce40342)
+
+
 Также по заданию требовалось провести тесты. Результат запуска файла с тестами:
 
-![{17188A5D-D5A0-4758-8534-0C2FF91EB8C0}](https://github.com/user-attachments/assets/632f8cfb-47da-436b-ba95-e76dac58a2c0)
+![{F16A11C6-0333-4F5B-A045-16511959BD79}](https://github.com/user-attachments/assets/9419e372-db4e-4fe2-a2ec-4735a3039caa)
+
 
 
 
