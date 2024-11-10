@@ -75,7 +75,7 @@ array( значение, значение, значение, ... )
 
 пример входного файла:
 
-![{6740FC9E-C336-46E8-BC11-011E6ECBAA76}](https://github.com/user-attachments/assets/aedb4961-b95e-4706-8102-48afd38052be)
+![{F54D954E-1A56-412C-B41A-EAF6BDB0E3FB}](https://github.com/user-attachments/assets/5254c9f8-5688-4a48-a65c-153f6da556af)
 
 
 пример выходного файла:
@@ -86,7 +86,7 @@ array( значение, значение, значение, ... )
 
 пример входного файла:
 
-![{B77BC86A-1980-4340-AE62-303F218A302A}](https://github.com/user-attachments/assets/f7aacc34-63d2-4a48-b9fa-0e7fb182387d)
+![{C2D0261F-7E94-41E5-9470-5EA60E81128E}](https://github.com/user-attachments/assets/f9234e4b-d0db-4039-9ca8-42e9f61a4c27)
 
 
 пример выходного файла:
