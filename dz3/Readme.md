@@ -75,8 +75,7 @@ array( значение, значение, значение, ... )
 
 пример входного файла:
 
-![{F54D954E-1A56-412C-B41A-EAF6BDB0E3FB}](https://github.com/user-attachments/assets/5254c9f8-5688-4a48-a65c-153f6da556af)
-
+![{64701008-95E5-4718-9A62-6E795117AE4A}](https://github.com/user-attachments/assets/26d56394-3e17-46ae-bd80-8bfaf2ad99ec)
 
 пример выходного файла:
 
