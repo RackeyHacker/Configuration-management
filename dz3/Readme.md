@@ -95,7 +95,8 @@ array( значение, значение, значение, ... )
 
 Также по заданию требовалось провести тесты. Результат запуска файла с тестами:
 
-![{F16A11C6-0333-4F5B-A045-16511959BD79}](https://github.com/user-attachments/assets/9419e372-db4e-4fe2-a2ec-4735a3039caa)
+![{17DA22F5-5860-4FE0-AE3F-CB2D97C8AC10}](https://github.com/user-attachments/assets/f24c3ec4-76ec-4d22-a688-5e6e96e09237)
+
 
 
 
