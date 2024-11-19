@@ -110,14 +110,12 @@ def interpreter(input_file, output_file, mem_range):
 def main():
     parser = argparse.ArgumentParser(description='Assembler and Interpreter for a custom VM.')
     subparsers = parser.add_subparsers(dest='command')
-
-    # Assembler arguments
+    
     asm_parser = subparsers.add_parser('assemble', help='Assemble source code into binary')
     asm_parser.add_argument('input_file', help='Path to the input source file')
     asm_parser.add_argument('output_file', help='Path to the output binary file')
     asm_parser.add_argument('log_file', help='Path to the log JSON file')
 
-    # Interpreter arguments
     int_parser = subparsers.add_parser('interpret', help='Interpret binary file')
     int_parser.add_argument('input_file', help='Path to the input binary file')
     int_parser.add_argument('output_file', help='Path to the output JSON file')
