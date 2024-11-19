@@ -1,0 +1,4 @@
+load_const 10 6 632
+read_mem 54 328 3
+write_mem 39 1 5
+popcnt 18 6
