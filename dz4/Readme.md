@@ -15,6 +15,7 @@ log.json (лог с инструкциями).
 result.json (результат выполнения виртуальной машины).
 
 Пояснение к запуску кода:
+
 ![{3CDB206F-815D-4F18-B2A9-EB5A72C4D243}](https://github.com/user-attachments/assets/5c664c20-103b-4d6d-9f25-6d60f578540b)
 
 
