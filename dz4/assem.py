@@ -1,116 +1,102 @@
 import argparse
 import json
-import struct
-
 
 def assembler(input_file, output_file, log_file):
-    # Чтение исходного текстового файла
     with open(input_file, 'r') as f:
         code = [line.strip().split() for line in f.readlines()]
+        code = [(op, *map(int, args)) for op, *args in code]
 
-    binary_code = []
+    bc = []
     log_entries = []
-
     for line_num, (op, *args) in enumerate(code, start=1):
         try:
-            if op == 'load_const':  # Загрузка константы
-                if len(args) != 3:
-                    raise ValueError(f"Line {line_num}: Expected 3 arguments for 'load_const', got {len(args)}")
-                a, b, c = map(int, args)
-                binary_code.append(serialize(0x0A, b, c))  # Преобразование в байты
-                log_entries.append({"A": a, "B": b, "C": c})
-
-            elif op == 'read_mem':  # Чтение из памяти
-                if len(args) != 3:
-                    raise ValueError(f"Line {line_num}: Expected 3 arguments for 'read_mem', got {len(args)}")
-                a, b, c = map(int, args)
-                binary_code.append(serialize(0x36, b, c))
-                log_entries.append({"A": a, "B": b, "C": c})
-
-            elif op == 'write_mem':  # Запись в память
-                if len(args) != 3:
-                    raise ValueError(f"Line {line_num}: Expected 3 arguments for 'write_mem', got {len(args)}")
-                a, b, c = map(int, args)
-                binary_code.append(serialize(0xA7, b, c))
-                log_entries.append({"A": a, "B": b, "C": c})
-
-            elif op == 'popcnt':  # Унарная операция popcnt
+            if op == 'load_const':
                 if len(args) != 2:
-                    raise ValueError(f"Line {line_num}: Expected 2 arguments for 'popcnt', got {len(args)}")
-                a, b = map(int, args)
-                binary_code.append(serialize(0x12, a, b))
-                log_entries.append({"A": a, "B": b})
-
+                    raise ValueError(f"Line {line_num}: 'load_const' expects 2 arguments, got {len(args)}")
+                b, c = args
+                bc += serializer(10, ((b, 7), (c, 10)), 5)
+                log_entries.append(f"load_const b={b} c={c}")
+            elif op == 'read':
+                if len(args) != 3:
+                    raise ValueError(f"Line {line_num}: 'read' expects 3 arguments, got {len(args)}")
+                b, c, d = args
+                bc += serializer(54, ((b, 7), (c, 39), (d, 41)), 6)
+                log_entries.append(f"read b={b} c={c} d={d}")
+            elif op == 'write':
+                if len(args) != 2:
+                    raise ValueError(f"Line {line_num}: 'write' expects 2 arguments, got {len(args)}")
+                b, c = args
+                bc += serializer(39, ((b, 7), (c, 10)), 2)
+                log_entries.append(f"write b={b} c={c}")
+            elif op == 'popcnt':
+                if len(args) != 2:
+                    raise ValueError(f"Line {line_num}: 'popcnt' expects 2 arguments, got {len(args)}")
+                b, c = args
+                bc += serializer(18, ((b, 7), (c, 10)), 6)
+                log_entries.append(f"popcnt b={b} c={c}")
             else:
                 raise ValueError(f"Line {line_num}: Unknown operation '{op}'")
         except ValueError as e:
             print(f"Error in input file: {e}")
             return
-
-    # Запись бинарного кода в файл
+    
     with open(output_file, 'wb') as f:
-        for bc in binary_code:
-            f.write(bc)
-
-    # Запись лога в формате JSON
-    log_data = [{"instruction": entry} for entry in log_entries]
+        f.write(bytearray(bc))
+    
     with open(log_file, 'w') as f:
-        json.dump(log_data, f, indent=4)
+        json.dump(log_entries, f, indent=4)
 
 
-def serialize(opcode, b, c):
-    # Преобразует операнд в бинарное представление в зависимости от команды
-    if opcode == 0xA7:  # write_mem (2 байта)
-        return struct.pack('<BB', opcode, b)
-    elif opcode == 0x12:  # popcnt (6 байт)
-        return struct.pack('<BHH', opcode, b, c)
-    else:  # load_const, read_mem (5 байт)
-        return struct.pack('<BHH', opcode, b, c)
+def serializer(cmd, fields, size):
+    bits = cmd
+    for value, shift in fields:
+        bits |= value << shift
+    return bits.to_bytes(size, 'little')
 
-
-def interpreter(input_file, output_file, mem_range):
-    # Чтение бинарного файла
+def interpreter(input_file, output_file, memory_range):
     with open(input_file, 'rb') as f:
-        binary_code = f.read()
+        bc = f.read()
 
-    memory = [0] * 1024  # Инициализация памяти
-    registers = [0] * 32  # Инициализация регистров
+    memory = [0] * 256
+    commands = parse_binary_commands(bc)
 
-    i = 0
-    while i < len(binary_code):
-        opcode = binary_code[i]
-        if opcode == 0xA7:  # Команда записи в память (2 байта)
-            b, = struct.unpack('<B', binary_code[i + 1:i + 2])
-            memory[b] = registers[b]  # Записать значение из регистра в память
-            i += 2
-        elif opcode == 0x12:  # Операция popcnt (6 байт)
-            b, c = struct.unpack('<HH', binary_code[i + 1:i + 6])
-            registers[b] = bin(registers[c]).count('1')  # Считаем количество единичных битов в регистре c
-            i += 6
-        elif opcode == 0x0A or opcode == 0x36:  # load_const или read_mem (5 байт)
-            b, c = struct.unpack('<HH', binary_code[i + 1:i + 5])
-            if opcode == 0x0A:
-                registers[b] = c  # Загрузка константы в регистр
-            elif opcode == 0x36:
-                registers[c] = memory[b]  # Чтение из памяти в регистр
-            i += 5
-        else:
-            print(f"Unknown opcode: {opcode}")
-            break
+    for op, *args in commands:
+        if op == "load_const":
+            memory[args[0]] = args[1]
+        elif op == "read":
+            memory[args[2]] = memory[args[0]]
+        elif op == "write":
+            memory[args[1]] = memory[args[0]]
+        elif op == "popcnt":
+            memory[args[0]] = bin(memory[args[1]]).count('1')
 
-    # Сохранение результатов в JSON
-    result = {
-        "memory": {f"address_{i}": memory[i] for i in range(mem_range[0], mem_range[1])},
-        "registers": {f"reg_{i}": registers[i] for i in range(32)}
-    }
+    result = {f"address_{i}": memory[i] for i in range(memory_range[0], memory_range[1])}
     with open(output_file, 'w') as f:
         json.dump(result, f, indent=4)
 
+def parse_binary_commands(bc):
+    instructions = {
+        10: ("load_const", 1, 4),
+        54: ("read", 1, 4, 1),
+        39: ("write", 1, 1),
+        18: ("popcnt", 1, 4)
+    }
+    i, commands = 0, []
+    while i < len(bc):
+        cmd = bc[i]
+        if cmd not in instructions:
+            i += 1
+            continue
+        op, *sizes = instructions[cmd]
+        args = [bc[i + 1 + j] for j in range(len(sizes))]
+        i += 1 + sum(sizes)
+        commands.append((op, *args))
+    return commands
 
 def main():
     parser = argparse.ArgumentParser(description='Assembler and Interpreter for a custom VM.')
     subparsers = parser.add_subparsers(dest='command')
-    
+
     asm_parser = subparsers.add_parser('assemble', help='Assemble source code into binary')
     asm_parser.add_argument('input_file', help='Path to the input source file')
     asm_parser.add_argument('output_file', help='Path to the output binary file')
@@ -126,7 +112,6 @@ def main():
         assembler(args.input_file, args.output_file, args.log_file)
     elif args.command == 'interpret':
         interpreter(args.input_file, args.output_file, args.mem_range)
-
 
 if __name__ == "__main__":
     main()
