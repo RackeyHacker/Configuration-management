@@ -28,7 +28,7 @@ result.json (результат выполнения виртуальной ма
 
 ![{3AD4DF21-760A-45C4-9E74-1DA5D278F575}](https://github.com/user-attachments/assets/16291778-5837-4c6b-90ea-6c7d8653f7c1)
 
-Был обновле файл: testComands.py. Он запускается простой командой: python -m pytest tests.py. Результаты для запуска файла:
+Был обновле файл: testComands.py. Он запускается простой командой: python -m pytest testComands.py. Результаты для запуска файла:
 
 ![{28B41119-49AA-40AD-9F22-3F6AB4591559}](https://github.com/user-attachments/assets/3f10ae77-afaa-4dc9-bd39-9fdb3e3cef10)
 
