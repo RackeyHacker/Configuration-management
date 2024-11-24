@@ -1,79 +1,88 @@
 import pytest
+import os
 import json
+from io import BytesIO
+from tempfile import NamedTemporaryFile
+from assem import assembler, interpreter, serializer, parse_binary_commands
 
-def interpreter(input_file, output_file, mem_range):
-    print(f"Interpreter ran with input: {input_file}, output: {output_file}, memory range: {mem_range}")
-    result = {
-        'registers': {
-            'reg_1': 200,
-        },
-        'memory': {
-            'address_5': 200,
-        }
-    }
-    with open(output_file, 'w') as f:
-        json.dump(result, f)
-    return result
+def test_serializer():
+    result = serializer(17, ((3, 5), (7, 15)), 3)
+    assert result == (17 | (3 << 5) | (7 << 15)).to_bytes(3, 'little')
 
-def assembler(input_file, output_file, log_file):
-    print(f"Assembler ran with input: {input_file}, output: {output_file}, log: {log_file}")
-    with open(output_file, 'wb') as f:
-        f.write(bytes([0x0A, 0xE3, 0x09, 0x00, 0x00]))
+    result = serializer(1, ((4, 5), (8, 12), (15, 19)), 5)
+    assert result == (1 | (4 << 5) | (8 << 12) | (15 << 19)).to_bytes(5, 'little')
+    
+def test_assembler(tmp_path):
+    input_file = tmp_path / "input.txt"
+    output_file = tmp_path / "output.bin"
+    log_file = tmp_path / "log.json"
+
+    input_file.write_text("load_const 1 3\nread 2 3 4\n")
+
+    assembler(str(input_file), str(output_file), str(log_file))
+
+    with open(output_file, 'rb') as f:
+        binary_data = f.read()
+        assert len(binary_data) > 0
+
+    with open(log_file, 'r') as f:
+        log_entries = json.load(f)
+        assert len(log_entries) == 2
+        assert log_entries[0] == "load_const b=1 c=3"
+        assert log_entries[1] == "read b=2 c=3 d=4"
+
 
 def test_interpreter(tmp_path):
     input_file = tmp_path / "input.bin"
     output_file = tmp_path / "output.json"
-    binary_data = b'\x0A\xE3\x09\x00\x00'
 
     with open(input_file, 'wb') as f:
-        f.write(binary_data)
+        f.write(serializer(17, ((0, 5), (10, 15)), 3))
+        f.write(serializer(54, ((2, 7), (3, 39), (4, 41)), 6))
 
-    result = interpreter(input_file=str(input_file), output_file=str(output_file), mem_range=(0, 10))
+    interpreter(str(input_file), str(output_file), memory_range=(0, 10))
 
-    assert result['registers']['reg_1'] == 200
-    assert result['memory']['address_5'] == 200
-
-def test_load_constant(tmp_path):
-    input_data = "load_const 17 6 42"
-    expected_binary = bytes([0x0A, 0xE3, 0x09, 0x00, 0x00])
-
-    assembler_input_file = tmp_path / "test_load_constant.asm"
-    assembler_output_file = tmp_path / "test_load_constant.bin"
-    assembler_log_file = tmp_path / "test_load_constant_log.json"
-
-    with open(assembler_input_file, 'w') as f:
-        f.write(input_data)
-
-    assembler(input_file=str(assembler_input_file), output_file=str(assembler_output_file), log_file=str(assembler_log_file))
-
-    with open(assembler_output_file, 'rb') as f:
-        binary_code = f.read()
-
-    assert list(binary_code) == list(expected_binary)
-
-def test_read_write_memory(tmp_path):
-    input_data = [
-        "load_const 10 1 200",
-        "write_mem 39 1 5",
-        "read_mem 54 328 3"
-    ]
-
-    input_file = tmp_path / "test_mem.asm"
-    output_bin_file = tmp_path / "test_mem.bin"
-    output_json_file = tmp_path / "test_mem_result.json"
-
-    with open(input_file, 'w') as f:
-        f.write("\n".join(input_data))
-
-    assembler(input_file=str(input_file), output_file=str(output_bin_file), log_file=str(tmp_path / "log.json"))
-
-    result = interpreter(input_file=str(output_bin_file), output_file=str(output_json_file), mem_range=(0, 32))
-
-    with open(output_json_file, 'r') as f:
+    with open(output_file, 'r') as f:
         result = json.load(f)
+        assert len(result) == 10
+        assert result.get("address_0") == 0
+        assert result.get("address_2") == 10
 
-    assert result['registers']['reg_1'] == 200
-    assert result['memory']['address_5'] == 200
+def test_parse_binary_commands():
+    bc = b''
+    result = parse_binary_commands(bc)
+    assert result == []
+
+def test_load_constant():
+    result = serializer(17, ((62, 5), (3, 15)), 3)
+    assert result == bytes([0xD1, 0x87, 0x01])
+
+def test_write_memory():
+    result = serializer(1, ((61, 5), (52, 12), (812, 19)), 5)
+    assert result == bytes([0xA1, 0x47, 0x63, 0x19, 0x00])
+
+def test_bitwise_rotate_right():
+    result = serializer(20, ((852, 5), (103, 34)), 6)
+    assert result == bytes([0x94, 0x6A, 0x00, 0x00, 0x9C, 0x01])
+
+def test_read_memory():
+    result = serializer(3, ((103, 5), (101, 12), (76, 26)), 5)
+    assert result == bytes([0xE3, 0x5C, 0x06, 0x30, 0x01])
+
+def test_program_execution(tmp_path):
+    input_file = tmp_path / "input.bin"
+    output_file = tmp_path / "output.json"
+
+    with open(input_file, 'wb') as f:
+        for i in range(7):
+            f.write(serializer(20, ((i, 5), (i + 1, 34)), 6))
+
+    interpreter(str(input_file), str(output_file), memory_range=(0, 7))
+
+    with open(output_file, 'r') as f:
+        result = json.load(f)
+        assert len(result) == 7
+
 
 if __name__ == "__main__":
     pytest.main()
