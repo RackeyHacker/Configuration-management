@@ -1,4 +1,4 @@
-import argparse1
+import argparse
 import json
 
 def assembler(input_file, output_file, log_file):
