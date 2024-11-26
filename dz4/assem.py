@@ -57,20 +57,42 @@ def interpreter(input_file, output_file, memory_range):
     with open(input_file, 'rb') as f:
         bc = f.read()
 
-    memory = [0] * 256
+    memory = [0] * 256 
+    registers = [0] * 8 
+
     commands = parse_binary_commands(bc)
 
     for op, *args in commands:
         if op == "load_const":
-            memory[args[0]] = args[1]
+            if len(args) == 2:
+                reg, value = args
+                registers[reg] = value
+            else:
+                memory[args[0]] = args[1]
         elif op == "read":
-            memory[args[2]] = memory[args[0]]
+            if len(args) == 3:
+                b, c, d = args
+                memory[d] = registers[b]
+            else:
+                memory[args[2]] = memory[args[0]]
         elif op == "write":
-            memory[args[1]] = memory[args[0]]
+            if len(args) == 2:
+                b, c = args
+                registers[b] = memory[c]
+            else:
+                memory[args[1]] = memory[args[0]]
         elif op == "popcnt":
-            memory[args[0]] = bin(memory[args[1]]).count('1')
+            if len(args) == 2:
+                reg, src = args
+                registers[reg] = bin(memory[src]).count('1')
+        else:
+            raise ValueError(f"Неизвестная операция: {op}")
 
-    result = {f"address_{i}": memory[i] for i in range(memory_range[0], memory_range[1])}
+    result = {
+        "memory": {f"address_{i}": memory[i] for i in range(memory_range[0], memory_range[1])},
+        "registers": {f"reg_{i}": registers[i] for i in range(8)}  # Выводим состояние регистров
+    }
+
     with open(output_file, 'w') as f:
         json.dump(result, f, indent=4)
 
