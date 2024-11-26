@@ -1,77 +1,74 @@
 import pytest
-import os
 import json
 from io import BytesIO
-from assem import assembler, interpreter, serializer, parse_binary_commands
+from tempfile import NamedTemporaryFile
+from assem import assemble  
+from inter import interpret, read_bin
 
-def test_load_const(tmp_path):
-    input_file = tmp_path / "input.bin"
-    output_file = tmp_path / "output.json"
+@pytest.mark.parametrize("command, input_str, expected_binary_data, expected_log", [
+    ("LOAD", "LOAD 10 15", 
+     bytearray([0x0A, 0x00, 0x0A, 0x15, 0x00, 0x00]), 
+     [{"command": "LOAD", "opcode": 10, "const": 15, "address": 10}]),
 
-    with open(input_file, 'wb') as f:
-        f.write(bytes([10, 6, 0, 0, 0]))
+    ("READ", "READ 5 6 7", 
+     bytearray([0x36, 0x05, 0x06, 0x07, 0x00, 0x00]), 
+     [{"command": "READ", "opcode": 54, "addr1": 5, "addr2": 6}]),
 
-    try:
-        interpreter(str(input_file), str(output_file), (0, 10))
-    except Exception as e:
-        pytest.fail(f"Error during interpretation: {e}")
+    ("WRITE", "WRITE 1 2", 
+     bytearray([0xA7, 0x01, 0x02, 0x00]), 
+     [{"command": "WRITE", "opcode": 39, "addr1": 1, "addr2": 2}]),
 
-    with open(output_file, 'r') as f:
+    ("POP_CNT", "POP_CNT 5 6", 
+     bytearray([0x12, 0x05, 0x06, 0x00, 0x00]), 
+     [{"command": "POP_CNT", "opcode": 18, "addr1": 5, "addr2": 6}]),
+])
+def test_assembler_commands(command, input_str, expected_binary_data, expected_log):
+    with NamedTemporaryFile(delete=False) as input_file:
+        input_file.write(input_str.encode())
+        input_file_name = input_file.name
+    
+    binary_file = f"{input_file_name}.bin"
+    log_file = f"{input_file_name}.log"
+
+    assemble(input_file_name, binary_file, log_file)
+
+    with open(binary_file, 'rb') as f:
+        binary_data = f.read()
+        assert binary_data == expected_binary_data  
+
+    with open(log_file, 'r') as f:
+        log_entries = json.load(f)
+        assert log_entries == expected_log 
+
+
+@pytest.mark.parametrize("binary_data, expected_memory_result", [
+    (bytearray([0x0A, 0x00, 0x0A, 0x15, 0x00, 0x00]), {0: 10, 1: 15}),
+    (bytearray([0x36, 0x05, 0x06, 0x07, 0x00, 0x00]), {5: 6, 6: 7}),
+    (bytearray([0xA7, 0x01, 0x02, 0x00]), {1: 2}),
+    (bytearray([0x12, 0x05, 0x06, 0x00, 0x00]), {5: 6}),
+])
+def test_interpreter_commands(binary_data, expected_memory_result):
+
+    with NamedTemporaryFile(delete=False) as input_file:
+        input_file.write(binary_data)
+        input_file_name = input_file.name
+
+    result_file = f"{input_file_name}_result.json"
+    interpret(binary_data, result_file, memory_range=(0, 10))
+
+    with open(result_file, 'r') as f:
         result = json.load(f)
-        address_6_value = result.get("address_6", None)
-        assert address_6_value == 632, f"Expected 632 at address_6, but got {address_6_value}"
+        assert result == expected_memory_result
 
-def test_read(tmp_path):
-    input_file = tmp_path / "input.bin"
-    output_file = tmp_path / "output.json"
 
-    with open(input_file, 'wb') as f:
-        f.write(bytes([10, 6, 0, 0, 0]))
-        f.write(bytes([54, 0xA4, 0x00, 0x00, 0x80, 0x01]))
+def test_read_bin():
 
-    try:
-        interpreter(str(input_file), str(output_file), (0, 10))
-    except Exception as e:
-        pytest.fail(f"Error during interpretation: {e}")
+    binary_data = bytearray([0x0A, 0x00, 0x0A, 0x15, 0x00, 0x00])
 
-    with open(output_file, 'r') as f:
-        result = json.load(f)
-        address_4_value = result.get("address_4", None)
-        assert address_4_value == 0, f"Expected 0 at address_4, but got {address_4_value}"
+    with NamedTemporaryFile(delete=False) as input_file:
+        input_file.write(binary_data)
+        input_file_name = input_file.name
 
-def test_write(tmp_path):
-    input_file = tmp_path / "input.bin"
-    output_file = tmp_path / "output.json"
+    result = read_bin(input_file_name)
 
-    with open(input_file, 'wb') as f:
-        f.write(bytes([10, 6, 0, 0, 0]))
-        f.write(bytes([39, 6, 7]))
-
-    try:
-        interpreter(str(input_file), str(output_file), (0, 10))
-    except Exception as e:
-        pytest.fail(f"Error during interpretation: {e}")
-
-    with open(output_file, 'r') as f:
-        result = json.load(f)
-        address_7_value = result.get("address_7", None)
-        address_6_value = result.get("address_6", None)
-        assert address_7_value == address_6_value, f"Expected address_7 to be {address_6_value}, but got {address_7_value}"
-
-def test_popcnt(tmp_path):
-    input_file = tmp_path / "input.bin"
-    output_file = tmp_path / "output.json"
-
-    with open(input_file, 'wb') as f:
-        f.write(bytes([10, 6, 0, 0, 0]))
-        f.write(0b11110000.to_bytes(1, byteorder='little'))
-
-    try:
-        interpreter(str(input_file), str(output_file), (0, 10))
-    except Exception as e:
-        pytest.fail(f"Error during interpretation: {e}")
-
-    with open(output_file, 'r') as f:
-        result = json.load(f)
-        address_6_value = result.get("address_6", None)
-        assert address_6_value == 4, f"Expected 4 at address_6 (popcnt result), but got {address_6_value}"
+    assert result == binary_data
