@@ -90,7 +90,7 @@ def interpreter(input_file, output_file, memory_range):
 
     result = {
         "memory": {f"address_{i}": memory[i] for i in range(memory_range[0], memory_range[1])},
-        "registers": {f"reg_{i}": registers[i] for i in range(8)}  # Выводим состояние регистров
+        "registers": {f"reg_{i}": registers[i] for i in range(8)}
     }
 
     with open(output_file, 'w') as f:
