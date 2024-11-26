@@ -1,139 +1,85 @@
-import argparse
+import struct
 import json
+import sys
+from dataclasses import dataclass
 
-def assembler(input_file, output_file, log_file):
-    with open(input_file, 'r') as f:
-        code = [line.strip().split() for line in f.readlines()]
-        code = [(op, *map(int, args)) for op, *args in code]
+COMMANDS = {
+    "LOAD": 10,
+    "READ": 54,
+    "WRITE": 39,
+    "POP_CNT": 18,
+}
 
-    bc = []
-    log_entries = []
-    for line_num, (op, *args) in enumerate(code, start=1):
-        try:
-            if op == 'load_const':
-                if len(args) != 2:
-                    raise ValueError(f"Line {line_num}: 'load_const' expects 2 arguments, got {len(args)}")
-                b, c = args
-                bc += serializer(10, ((b, 7), (c, 10)), 5)
-                log_entries.append(f"load_const b={b} c={c}")
-            elif op == 'read':
-                if len(args) != 3:
-                    raise ValueError(f"Line {line_num}: 'read' expects 3 arguments, got {len(args)}")
-                b, c, d = args
-                bc += serializer(54, ((b, 7), (c, 39), (d, 41)), 6)
-                log_entries.append(f"read b={b} c={c} d={d}")
-            elif op == 'write':
-                if len(args) != 2:
-                    raise ValueError(f"Line {line_num}: 'write' expects 2 arguments, got {len(args)}")
-                b, c = args
-                bc += serializer(39, ((b, 7), (c, 10)), 2)
-                log_entries.append(f"write b={b} c={c}")
-            elif op == 'popcnt':
-                if len(args) != 2:
-                    raise ValueError(f"Line {line_num}: 'popcnt' expects 2 arguments, got {len(args)}")
-                b, c = args
-                bc += serializer(18, ((b, 7), (c, 10)), 6)
-                log_entries.append(f"popcnt b={b} c={c}")
-            else:
-                raise ValueError(f"Line {line_num}: Unknown operation '{op}'")
-        except ValueError as e:
-            print(f"Error in input file: {e}")
-            return
-    
-    with open(output_file, 'wb') as f:
-        f.write(bytearray(bc))
-    
-    with open(log_file, 'w') as f:
-        json.dump(log_entries, f, indent=4)
+class BinaryBuffer:
+    def __init__(self):
+        self.binary_data = bytearray()
+        self.bit_size = 0
+
+    def write(self, x, bit_width):
+        while self.bit_size % 8 != 0:
+            self.bit_size += 1  # Padding to next byte
+        
+        for i in range(bit_width):
+            byte_index = self.bit_size // 8
+            bit_index = self.bit_size % 8
+            
+            if byte_index >= len(self.binary_data):
+                self.binary_data.append(0)
+            
+            # Set the bit at position 'bit_index' in byte at 'byte_index'
+            self.binary_data[byte_index] |= (((x >> i) & 1) << bit_index)
+            
+            self.bit_size += 1
 
 
-def serializer(cmd, fields, size):
-    bits = cmd
-    for value, shift in fields:
-        bits |= value << shift
-    return bits.to_bytes(size, 'little')
+def assemble(input_path, binary_path, log_path):
+    log = []
+    buffer = BinaryBuffer()
 
-def interpreter(input_file, output_file, memory_range):
-    with open(input_file, 'rb') as f:
-        bc = f.read()
+    with open(input_path, "r") as f:
+        lines = f.readlines()
 
-    memory = [0] * 256 
-    registers = [0] * 8 
-
-    commands = parse_binary_commands(bc)
-
-    for op, *args in commands:
-        if op == "load_const":
-            if len(args) == 2:
-                reg, value = args
-                registers[reg] = value
-            else:
-                memory[args[0]] = args[1]
-        elif op == "read":
-            if len(args) == 3:
-                b, c, d = args
-                memory[d] = registers[b]
-            else:
-                memory[args[2]] = memory[args[0]]
-        elif op == "write":
-            if len(args) == 2:
-                b, c = args
-                registers[b] = memory[c]
-            else:
-                memory[args[1]] = memory[args[0]]
-        elif op == "popcnt":
-            if len(args) == 2:
-                reg, src = args
-                registers[reg] = bin(memory[src]).count('1')
-        else:
-            raise ValueError(f"Неизвестная операция: {op}")
-
-    result = {
-        "memory": {f"address_{i}": memory[i] for i in range(memory_range[0], memory_range[1])},
-        "registers": {f"reg_{i}": registers[i] for i in range(8)}
-    }
-
-    with open(output_file, 'w') as f:
-        json.dump(result, f, indent=4)
-
-def parse_binary_commands(bc):
-    instructions = {
-        10: ("load_const", 1, 4),
-        54: ("read", 1, 4, 1),
-        39: ("write", 1, 1),
-        18: ("popcnt", 1, 4)
-    }
-    i, commands = 0, []
-    while i < len(bc):
-        cmd = bc[i]
-        if cmd not in instructions:
-            i += 1
+    for line in lines:
+        if line.strip().startswith("#") or not line.strip():
             continue
-        op, *sizes = instructions[cmd]
-        args = [bc[i + 1 + j] for j in range(len(sizes))]
-        i += 1 + sum(sizes)
-        commands.append((op, *args))
-    return commands
+        
+        parts = line.strip().split()
+        command = parts[0].upper()
+        opcode = COMMANDS.get(command)
 
-def main():
-    parser = argparse.ArgumentParser(description='Assembler and Interpreter for a custom VM.')
-    subparsers = parser.add_subparsers(dest='command')
+        buffer.write(opcode, 7)  # Для команды всегда записываем 7 бит
 
-    asm_parser = subparsers.add_parser('assemble', help='Assemble source code into binary')
-    asm_parser.add_argument('input_file', help='Path to the input source file')
-    asm_parser.add_argument('output_file', help='Path to the output binary file')
-    asm_parser.add_argument('log_file', help='Path to the log JSON file')
+        if command == "LOAD":
+            const, addr = map(int, parts[1:])
+            buffer.write(addr, 4)
+            buffer.write(const, 27)
+            log.append({"command": command, "opcode": opcode, "const": const, "address": addr})
+        elif command == "READ":
+            addr1, addr2 = map(int, parts[1:])
+            buffer.write(addr1, 6)
+            buffer.write(addr2, 39)
+            log.append({"command": command, "opcode": opcode, "addr1": addr1, "addr2": addr2})
+        elif command == "WRITE":
+            addr1, addr2 = map(int, parts[1:])
+            buffer.write(addr1, 6)
+            buffer.write(addr2, 12)  # Заменить на 12 бит для корректной записи в память
+            log.append({"command": command, "opcode": opcode, "addr1": addr1, "addr2": addr2})
+        elif command == "POP_CNT":
+            addr1, addr2 = map(int, parts[1:])
+            buffer.write(addr1, 6)
+            buffer.write(addr2, 41)
+            log.append({"command": command, "opcode": opcode, "addr1": addr1, "addr2": addr2})
+        else:
+            raise ValueError(f"Unknown command: {command}")
 
-    int_parser = subparsers.add_parser('interpret', help='Interpret binary file')
-    int_parser.add_argument('input_file', help='Path to the input binary file')
-    int_parser.add_argument('output_file', help='Path to the output JSON file')
-    int_parser.add_argument('mem_range', type=int, nargs=2, help='Range of memory to output (start end)')
+    with open(binary_path, "wb") as f:
+        f.write(buffer.binary_data)
 
-    args = parser.parse_args()
-    if args.command == 'assemble':
-        assembler(args.input_file, args.output_file, args.log_file)
-    elif args.command == 'interpret':
-        interpreter(args.input_file, args.output_file, args.mem_range)
+    with open(log_path, "w") as f:
+        json.dump(log, f, indent=4)
 
 if __name__ == "__main__":
-    main()
+    input_file = sys.argv[1]
+    binary_file = sys.argv[2]
+    log_file = sys.argv[3]
+    assemble(input_file, binary_file, log_file)
