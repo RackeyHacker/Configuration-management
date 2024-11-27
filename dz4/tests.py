@@ -6,7 +6,7 @@ import json
 
 project_dir = pathlib.Path(__file__).parent
 
-@dataclass1
+@dataclass
 class BasicOpsCase:
     name: str
     input: str
