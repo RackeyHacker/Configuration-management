@@ -32,10 +32,10 @@ BASIC_OPS_CASES = [
 ]
 
 def run_assembler(input_file, output_file, log_file):
-    return subprocess.run(["python3", "assem.py", str(input_file), str(output_file), str(log_file)], capture_output=True)
+    return subprocess.run(["python", "assem.py", str(input_file), str(output_file), str(log_file)], capture_output=True)
 
 def run_interpreter(assembler_file, interpreter_file, start, end):
-    return subprocess.run(["python3", "inter.py", str(assembler_file), str(interpreter_file), str(start), str(end)], capture_output=True)
+    return subprocess.run(["python", "inter.py", str(assembler_file), str(interpreter_file), str(start), str(end)], capture_output=True)
 
 @pytest.mark.parametrize("op", BASIC_OPS_CASES)
 def test_basic_operations(tmp_path, op):
