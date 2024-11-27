@@ -1,5 +1,0 @@
-Starting interpretation...
-0x05, 0x06, 0x00, 0x00
-
-
-Interpretation completed.
