@@ -18,6 +18,10 @@ test_program.asm - файл с входными данными для прове
 
 test_program.txt - файл с входными данными
 
+input_program.txt  - файл с входными данными для тестовой программы
+
+result.json - файл вывод для тестовой программы
+
 Основные комментари по поводу кода можно увидеть в самих файлах с кодом.
 
 Запуск:
@@ -77,4 +81,5 @@ test_program.txt - файл с входными данными
 
 Тестовая программа (Выполнить поэлементно операцию popcnt() над вектором длины 8):
 
-![{6D6D26AD-3A50-4472-9CED-5EB131CC73ED}](https://github.com/user-attachments/assets/9bd66791-f7af-4fdd-9f3c-f932cfd8aaf7)
+![{B5E09DFA-21BF-4118-AD13-31978ED30236}](https://github.com/user-attachments/assets/ea2ebbb7-995f-48a5-9ea0-35e850217283)
+
